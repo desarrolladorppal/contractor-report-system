@@ -1,0 +1,205 @@
+// lib/api.ts
+import Constants from 'expo-constants';
+import { supabase } from './supabase';
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL; 
+// Debug: Log API URL on startup
+console.log('[API] Conectando a:', API_URL);
+
+export const api = {
+  // Auth
+  async login(email: string, password: string) {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    return data.user;
+  },
+
+  async signUp(email: string, password: string, nombre: string) {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { nombre },
+      },
+    });
+    if (error) throw error;
+    return data.user;
+  },
+
+  async logout() {
+    await supabase.auth.signOut();
+  },
+
+  async getCurrentUser() {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error) throw error;
+    // Asegurar que devolvemos un objeto con la estructura correcta
+    if (!user) return null;
+    return {
+      id: user.id,
+      email: user.email,
+      user_metadata: user.user_metadata || {},
+    };
+  },
+
+  // Contratos
+  async getContratos(usuarioId: string) {
+    try {
+      const url = `${API_URL}/api/contracts?usuarioId=${usuarioId}`;
+      console.log('[API] GET Contratos:', url);
+      const res = await fetch(url);
+      if (!res.ok) {
+        if (res.status === 404) {
+          console.log('[API] No contratos encontrados (404)');
+          return [];
+        }
+        throw new Error(`Error ${res.status}: ${await res.text()}`);
+      }
+      const data = await res.json();
+      console.log('[API] Contratos recibidos:', data.length, 'items');
+      return data;
+    } catch (error) {
+      console.error('[API] Error en getContratos:', error);
+      console.error('[API] Backend URL:', `${API_URL}/api/contracts`);
+      console.error('[API] ¿Backend está corriendo en localhost:3001?');
+      return [];
+    }
+  },
+
+  async getContrato(contratoId: string, usuarioId: string) {
+    try {
+      const res = await fetch(`${API_URL}/api/contracts/${contratoId}?usuarioId=${usuarioId}`);
+      if (!res.ok) throw new Error('Error al cargar contrato');
+      return await res.json();
+    } catch (error) {
+      console.error('Error en getContrato:', error);
+      return null;
+    }
+  },
+
+  // Actividades
+  async getActividades(contratoId: string, usuarioId: string) {
+    try {
+      const url = `${API_URL}/api/activities?contratoId=${contratoId}&usuarioId=${usuarioId}`;
+      console.log('[API] GET Actividades:', url);
+      const res = await fetch(url);
+      if (!res.ok) {
+        if (res.status === 404) return [];
+        throw new Error(`Error ${res.status}: ${await res.text()}`);
+      }
+      const data = await res.json();
+      return data;
+    } catch (error) {
+      console.error('[API] Error en getActividades:', error);
+      console.error('[API] Backend URL:', `${API_URL}/api/activities`);
+      return [];
+    }
+  },
+
+  // Aportes
+  async getAportes(contratoId: string, usuarioId: string) {
+    try {
+      const res = await fetch(`${API_URL}/api/aportes?contratoId=${contratoId}&usuarioId=${usuarioId}`);
+      if (!res.ok) {
+        if (res.status === 404) return [];
+        throw new Error('Error al cargar aportes');
+      }
+      return await res.json();
+    } catch (error) {
+      console.error('Error en getAportes:', error);
+      return [];
+    }
+  },
+
+  async createAporte(data: any, usuarioId: string, contratoId: string) {
+    try {
+      const res = await fetch(`${API_URL}/api/aportes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...data, usuarioId, contratoId }),
+      });
+      if (!res.ok) {
+        const error = await res.text();
+        throw new Error(error || 'Error al crear aporte');
+      }
+      return await res.json();
+    } catch (error) {
+      console.error('Error en createAporte:', error);
+      throw error;
+    }
+  },
+
+  // Evidencias
+  async getEvidencias(contratoId: string, usuarioId: string) {
+    try {
+      const res = await fetch(`${API_URL}/api/evidencias?contratoId=${contratoId}&usuarioId=${usuarioId}`);
+      if (!res.ok) {
+        if (res.status === 404) return [];
+        throw new Error('Error al cargar evidencias');
+      }
+      return await res.json();
+    } catch (error) {
+      console.error('Error en getEvidencias:', error);
+      return [];
+    }
+  },
+
+  async uploadEvidence(formData: FormData, usuarioId: string, contratoId: string, actividadId: string) {
+    try {
+      // Los campos usuarioId, contratoId y actividadId ya vienen en el formData
+      // desde EvidenciaUpload.tsx — no los agregamos de nuevo para evitar duplicados.
+      const res = await fetch(`${API_URL}/api/evidencias/upload`, {
+        method: 'POST',
+        body: formData,
+        // NO incluir Content-Type: fetch lo pone automáticamente con el boundary correcto
+      });
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('[API] uploadEvidence error:', errorText);
+        throw new Error('Error al subir evidencia');
+      }
+      return await res.json();
+    } catch (error) {
+      console.error('Error en uploadEvidence:', error);
+      throw error;
+    }
+  },
+
+  async addEvidence(data: any) {
+    try {
+      const endpoint = data.tipo === 'enlace' 
+        ? `${API_URL}/api/evidencias/enlace`
+        : data.tipo === 'nota'
+        ? `${API_URL}/api/evidencias/nota`
+        : `${API_URL}/api/evidencias/upload`;
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error(`Error al agregar ${data.tipo}`);
+      return await res.json();
+    } catch (error) {
+      console.error('Error en addEvidence:', error);
+      throw error;
+    }
+  },
+
+  // Calendario
+  async getEventos(usuarioId: string, timeMin: string, timeMax: string) {
+    try {
+      const res = await fetch(
+        `${API_URL}/api/auth/google/events?usuarioId=${usuarioId}&timeMin=${timeMin}&timeMax=${timeMax}`
+      );
+      if (!res.ok) {
+        if (res.status === 401) return { eventos: [] };
+        throw new Error('Error al cargar eventos');
+      }
+      return await res.json();
+    } catch (error) {
+      console.error('Error en getEventos:', error);
+      return { eventos: [] };
+    }
+  },
+};
