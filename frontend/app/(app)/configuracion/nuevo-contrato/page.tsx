@@ -18,6 +18,7 @@ export default function NuevoContratoPage() {
     numero: "",
     entidad: "",
     objeto: "",
+    dependenciaContratante: "",
     fechaInicio: "",
     fechaFin: "",
     valor: 0,
@@ -28,7 +29,7 @@ export default function NuevoContratoPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!form.numero || !form.entidad || !form.objeto || !form.fechaInicio || !form.fechaFin || !form.valor) {
+    if (!form.numero || !form.entidad || !form.objeto || !form.dependenciaContratante || !form.fechaInicio || !form.fechaFin || !form.valor) {
       toast.error("Por favor completa todos los campos del contrato")
       return
     }
@@ -106,6 +107,14 @@ export default function NuevoContratoPage() {
                 value={form.entidad}
                 onChange={(v) => updateField("entidad", v)}
                 placeholder="Ej: Prosecto S.A. E.S.P."
+                required
+              />
+
+               <FieldInput
+                label="Dependencia contratante *"
+                value={form.dependenciaContratante}
+                onChange={(v) => updateField("dependenciaContratante", v)}
+                placeholder="Ej: Departamento de Mantenimiento"
                 required
               />
               
