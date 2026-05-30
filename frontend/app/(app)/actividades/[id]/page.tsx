@@ -22,6 +22,16 @@ import { formatColombiaDate } from "@/lib/utils"
 import { toast } from "sonner"
 import { format, parseISO } from "date-fns"
 import { es } from "date-fns/locale"
+import { EditarEvidenciaModal } from "./editar-evidencia-modal"
+
+interface Evidencia {
+  id?: string
+  nombre: string
+  tipo: string
+  drive?: {
+    url?: string
+  }
+}
 
 export default function ActividadDetailPage() {
   const params = useParams()
@@ -29,12 +39,14 @@ export default function ActividadDetailPage() {
   const { contratoActivo, usuarioId } = useContrato()
   const [actividad, setActividad] = useState<any>(null)
   const [aportes, setAportes] = useState<any[]>([])
-  const [evidencias, setEvidencias] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [editando, setEditando] = useState(false)
   const [tituloEditado, setTituloEditado] = useState("")
   const [descripcionEditada, setDescripcionEditada] = useState("")
-
+  const [modalEditarOpen, setModalEditarOpen] = useState(false);
+  const [evidencias, setEvidencias] = useState<Evidencia[]>([])
+  const [evidenciaSeleccionada, setEvidenciaSeleccionada] = useState<Evidencia | null>(null)
+  
   const actividadId = params.id as string
 
   useEffect(() => {
@@ -69,6 +81,11 @@ export default function ActividadDetailPage() {
       setLoading(false)
     }
   }
+
+const abrirModalEditar = (evidencia: Evidencia) => {
+  setEvidenciaSeleccionada(evidencia)
+  setModalEditarOpen(true)
+}
 
   const handleGuardarEdicion = async () => {
     console.log('🎯 handleGuardarEdicion - INICIANDO');
@@ -299,19 +316,35 @@ export default function ActividadDetailPage() {
                         {/* Evidencias del aporte */}
                         {aporte.evidenciaIds && aporte.evidenciaIds.length > 0 && (
                           <div className="mt-2 space-y-1">
-                            <p className="text-xs font-medium text-muted-foreground">Evidencias:</p>
+                            <p className="text-xs font-medium text-muted-foreground">
+                              Evidencias:
+                            </p>
+
                             {evidencias
                               .filter(ev => ev.id && aporte.evidenciaIds?.includes(ev.id))
                               .map(ev => (
                                 <div key={ev.id} className="flex items-center gap-2 text-xs">
                                   {getIconoEvidencia(ev.tipo)}
-                                  <span className="text-muted-foreground">{ev.nombre}</span>
+
+                                  <span className="text-muted-foreground">
+                                    {ev.nombre}
+                                  </span>
+
+                                  {/* Botón editar */}
+                                  <button
+                                    onClick={() => abrirModalEditar(ev)}
+                                    className="text-primary hover:text-primary/80"
+                                  >
+                                    <Edit3 className="h-3 w-3" />
+                                  </button>
+
+                                  {/* Botón descargar */}
                                   {ev.drive?.url && (
-                                    <a 
-                                      href={ev.drive.url} 
-                                      target="_blank" 
+                                    <a
+                                      href={ev.drive.url}
+                                      target="_blank"
                                       rel="noopener noreferrer"
-                                      className="text-primary hover:underline ml-auto"
+                                      className="text-primary hover:underline"
                                     >
                                       <Download className="h-3 w-3" />
                                     </a>
@@ -329,6 +362,11 @@ export default function ActividadDetailPage() {
           </div>
         </div>
       </div>
+      <EditarEvidenciaModal
+        open={modalEditarOpen}
+        onOpenChange={setModalEditarOpen}
+        evidencia={evidenciaSeleccionada}
+      />
     </div>
   )
 }
