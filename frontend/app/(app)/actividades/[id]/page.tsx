@@ -22,7 +22,7 @@ import { formatColombiaDate } from "@/lib/utils"
 import { toast } from "sonner"
 import { format, parseISO } from "date-fns"
 import { es } from "date-fns/locale"
-import { EditarEvidenciaModal } from "./editar-evidencia-modal"
+import { EditarAporteModal } from "./EditarAporteModal"
 
 interface Evidencia {
   id?: string
@@ -45,7 +45,7 @@ export default function ActividadDetailPage() {
   const [descripcionEditada, setDescripcionEditada] = useState("")
   const [modalEditarOpen, setModalEditarOpen] = useState(false);
   const [evidencias, setEvidencias] = useState<Evidencia[]>([])
-  const [evidenciaSeleccionada, setEvidenciaSeleccionada] = useState<Evidencia | null>(null)
+  const [aporteSeleccionado, setAporteSeleccionado] = useState<any | null>(null)
   
   const actividadId = params.id as string
 
@@ -82,10 +82,10 @@ export default function ActividadDetailPage() {
     }
   }
 
-const abrirModalEditar = (evidencia: Evidencia) => {
-  setEvidenciaSeleccionada(evidencia)
-  setModalEditarOpen(true)
-}
+  const abrirModalEditar = (aporte: any) => {
+    setAporteSeleccionado(aporte)
+    setModalEditarOpen(true)
+  }
 
   const handleGuardarEdicion = async () => {
     console.log('🎯 handleGuardarEdicion - INICIANDO');
@@ -332,7 +332,7 @@ const abrirModalEditar = (evidencia: Evidencia) => {
 
                                   {/* Botón editar */}
                                   <button
-                                    onClick={() => abrirModalEditar(ev)}
+                                    onClick={() => abrirModalEditar(aporte)}
                                     className="text-primary hover:text-primary/80"
                                   >
                                     <Edit3 className="h-3 w-3" />
@@ -362,11 +362,11 @@ const abrirModalEditar = (evidencia: Evidencia) => {
           </div>
         </div>
       </div>
-    <EditarEvidenciaModal
+    <EditarAporteModal
       open={modalEditarOpen}
       onOpenChange={setModalEditarOpen}
-      evidencia={evidenciaSeleccionada}
-      actividadId={actividadId}
+      aporte={aporteSeleccionado}
+      evidencias={evidencias}
       usuarioId={usuarioId!}
       onSuccess={cargarDatos}
     />
