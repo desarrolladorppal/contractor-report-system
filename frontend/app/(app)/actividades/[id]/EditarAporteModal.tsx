@@ -141,6 +141,7 @@ export function EditarAporteModal({
         {
           fecha: toColombiaDate(fecha),
           descripcion,
+          estado: aporte.estado || "completado",
           evidenciaIds
         },
         usuarioId
@@ -148,11 +149,11 @@ export function EditarAporteModal({
 
       toast.success("Aporte actualizado")
 
-      onSuccess()
+      await onSuccess()
       onOpenChange(false)
 
     } catch (error) {
-      console.error(error)
+      console.error("Error actualizando aporte:", error)
       toast.error("Error al actualizar")
     } finally {
       setSubmitting(false)

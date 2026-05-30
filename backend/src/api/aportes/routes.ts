@@ -78,4 +78,40 @@ router.post('/', async (req, res) => {
   }
 });
 
+router.put('/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { usuarioId } = req.query
+
+    if (!usuarioId) {
+      return res.status(400).json({ error: 'usuarioId es requerido' })
+    }
+
+    const aporteActualizado = await Aporte.findOneAndUpdate(
+      {
+        id,
+        usuarioId: usuarioId.toString()
+      },
+      {
+        ...req.body
+      },
+      {
+        new: true
+      }
+    )
+
+    if (!aporteActualizado) {
+      return res.status(404).json({ error: 'Aporte no encontrado' })
+    }
+
+    console.log('✅ Aporte actualizado:', id)
+
+    res.json(aporteActualizado)
+
+  } catch (error) {
+    console.error('❌ Error actualizando aporte:', error)
+    res.status(500).json({ error: 'Error al actualizar aporte' })
+  }
+})
+
 export default router;
