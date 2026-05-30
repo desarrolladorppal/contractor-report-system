@@ -4,8 +4,8 @@ import { useEffect, useState } from "react"
 import {
   Calendar,
   Loader2,
-  X,
   Save,
+  X,
   Upload,
   Link2,
   FileText
@@ -18,22 +18,22 @@ import {
   DialogTitle
 } from "@/components/ui/dialog"
 
-import { Button } from "@/components/ui/button"
 import { EvidenciaUpload } from "@/components/evidencia-upload"
 import { apiClient } from "@/lib/api-client"
 import { toast } from "sonner"
 
 interface Evidencia {
   id?: string
-  actividadId?: string
   nombre: string
-  descripcion?: string
-  fecha?: string
   tipo: string
-  url?: string
+  fecha?: string
+  descripcion?: string
+  drive?: {
+    url?: string
+  }
 }
 
-interface EditarEvidenciaModalProps {
+interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
   evidencia: Evidencia | null
@@ -49,68 +49,61 @@ export function EditarEvidenciaModal({
   actividadId,
   usuarioId,
   onSuccess
-}: EditarEvidenciaModalProps) {
+}: Props) {
   const [fecha, setFecha] = useState("")
   const [descripcion, setDescripcion] = useState("")
+  const [nombre, setNombre] = useState("")
   const [submitting, setSubmitting] = useState(false)
-  const [evidenciasGuardadas, setEvidenciasGuardadas] = useState<any[]>([])
+  const [evidenciaActual, setEvidenciaActual] = useState<any>(null)
 
   useEffect(() => {
-    if (evidencia && open) {
+    if (open && evidencia) {
+      console.log("📌 Evidencia recibida:", evidencia)
+
+      setNombre(evidencia.nombre || "")
+      setDescripcion(evidencia.descripcion || "")
+
       setFecha(
         evidencia.fecha
           ? new Date(evidencia.fecha).toISOString().split("T")[0]
           : ""
       )
 
-      setDescripcion(evidencia.descripcion || "")
-
-      setEvidenciasGuardadas([
-        {
-          id: evidencia.id,
-          nombre: evidencia.nombre,
-          tipo: evidencia.tipo,
-          url: evidencia.url
-        }
-      ])
+      setEvidenciaActual(evidencia)
     }
-  }, [evidencia, open])
+  }, [open, evidencia])
 
-  const handleEvidenciaGuardada = (nuevaEvidencia: any) => {
-    setEvidenciasGuardadas([nuevaEvidencia])
-    toast.success("Nueva evidencia cargada")
-  }
-
-  const handleEliminarEvidencia = () => {
-    setEvidenciasGuardadas([])
+  const handleNuevaEvidencia = (ev: any) => {
+    setEvidenciaActual(ev)
+    setNombre(ev.nombre || "")
+    toast.success("Evidencia reemplazada")
   }
 
   const handleGuardar = async () => {
     if (!evidencia?.id) return
 
-    setSubmitting(true)
-
     try {
+      setSubmitting(true)
+
       await apiClient.updateEvidencia(
         evidencia.id,
         {
-          fecha,
+          nombre,
           descripcion,
-          nombre: evidenciasGuardadas[0]?.nombre || evidencia.nombre,
-          tipo: evidenciasGuardadas[0]?.tipo || evidencia.tipo,
-          url: evidenciasGuardadas[0]?.url || evidencia.url
+          fecha,
+          tipo: evidenciaActual?.tipo || evidencia.tipo,
+          drive: evidenciaActual?.drive || evidencia.drive
         },
         usuarioId
       )
 
       toast.success("Evidencia actualizada")
-
       onSuccess()
       onOpenChange(false)
 
     } catch (error) {
       console.error(error)
-      toast.error("Error al actualizar evidencia")
+      toast.error("Error actualizando evidencia")
     } finally {
       setSubmitting(false)
     }
@@ -126,6 +119,19 @@ export function EditarEvidenciaModal({
         </DialogHeader>
 
         <div className="space-y-4">
+
+          {/* Nombre */}
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">
+              Nombre
+            </label>
+            <input
+              type="text"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              className="w-full px-3 py-2 border border-input rounded-lg"
+            />
+          </div>
 
           {/* Fecha */}
           <div>
@@ -156,74 +162,53 @@ export function EditarEvidenciaModal({
               value={descripcion}
               onChange={(e) => setDescripcion(e.target.value)}
               className="w-full px-3 py-2 border border-input rounded-lg resize-none"
-              placeholder="Describe esta evidencia..."
             />
           </div>
 
-          {/* Evidencia */}
-          <div className="space-y-3">
-            <label className="text-xs font-medium text-muted-foreground">
-              Reemplazar evidencia
-            </label>
+          {/* Evidencia actual */}
+          {evidenciaActual && (
+            <div className="flex items-center gap-2 bg-muted/30 p-2 rounded-lg">
+              {evidenciaActual.tipo === "archivo" && <Upload className="h-4 w-4" />}
+              {evidenciaActual.tipo === "enlace" && <Link2 className="h-4 w-4" />}
+              {evidenciaActual.tipo === "nota" && <FileText className="h-4 w-4" />}
 
-            <EvidenciaUpload
-              actividadId={actividadId}
-              onSuccess={handleEvidenciaGuardada}
-            />
+              <span className="flex-1 truncate text-sm">
+                {evidenciaActual.nombre}
+              </span>
 
-            {evidenciasGuardadas.length > 0 && (
-              <div className="space-y-2">
-                {evidenciasGuardadas.map((ev, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center gap-2 bg-muted/30 p-2 rounded-lg"
-                  >
-                    {ev.tipo === "archivo" && (
-                      <Upload className="h-4 w-4 text-primary" />
-                    )}
+              <button
+                onClick={() => setEvidenciaActual(null)}
+                className="text-destructive"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
 
-                    {ev.tipo === "enlace" && (
-                      <Link2 className="h-4 w-4 text-primary" />
-                    )}
+          {/* Reemplazar */}
+          <EvidenciaUpload
+            actividadId={actividadId}
+            onSuccess={handleNuevaEvidencia}
+          />
 
-                    {ev.tipo === "nota" && (
-                      <FileText className="h-4 w-4 text-primary" />
-                    )}
-
-                    <span className="flex-1 truncate text-sm">
-                      {ev.nombre}
-                    </span>
-
-                    <button
-                      type="button"
-                      onClick={handleEliminarEvidencia}
-                      className="text-destructive hover:text-destructive/80"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <Button
+          <button
             onClick={handleGuardar}
             disabled={submitting}
-            className="w-full"
+            className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground py-2 rounded-lg"
           >
             {submitting ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                <Loader2 className="h-4 w-4 animate-spin" />
                 Guardando...
               </>
             ) : (
               <>
-                <Save className="h-4 w-4 mr-2" />
+                <Save className="h-4 w-4" />
                 Guardar cambios
               </>
             )}
-          </Button>
+          </button>
+
         </div>
       </DialogContent>
     </Dialog>
