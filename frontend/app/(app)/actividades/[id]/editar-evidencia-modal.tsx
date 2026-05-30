@@ -4,7 +4,6 @@ import { useEffect, useState } from "react"
 import {
   Calendar,
   Loader2,
-  AlertCircle,
   X,
   Save,
   Upload,
@@ -19,19 +18,19 @@ import {
   DialogTitle
 } from "@/components/ui/dialog"
 
-import { EvidenciaUpload } from "@/components/evidencia-upload"
 import { Button } from "@/components/ui/button"
+import { EvidenciaUpload } from "@/components/evidencia-upload"
+import { apiClient } from "@/lib/api-client"
 import { toast } from "sonner"
 
 interface Evidencia {
   id?: string
+  actividadId?: string
   nombre: string
-  tipo: string
-  fecha?: string
   descripcion?: string
-  drive?: {
-    url?: string
-  }
+  fecha?: string
+  tipo: string
+  url?: string
 }
 
 interface EditarEvidenciaModalProps {
@@ -39,6 +38,7 @@ interface EditarEvidenciaModalProps {
   onOpenChange: (open: boolean) => void
   evidencia: Evidencia | null
   actividadId: string
+  usuarioId: string
   onSuccess: () => void
 }
 
@@ -47,6 +47,7 @@ export function EditarEvidenciaModal({
   onOpenChange,
   evidencia,
   actividadId,
+  usuarioId,
   onSuccess
 }: EditarEvidenciaModalProps) {
   const [fecha, setFecha] = useState("")
@@ -55,16 +56,29 @@ export function EditarEvidenciaModal({
   const [evidenciasGuardadas, setEvidenciasGuardadas] = useState<any[]>([])
 
   useEffect(() => {
-    if (evidencia) {
-      setFecha(evidencia.fecha?.split("T")[0] || "")
+    if (evidencia && open) {
+      setFecha(
+        evidencia.fecha
+          ? new Date(evidencia.fecha).toISOString().split("T")[0]
+          : ""
+      )
+
       setDescripcion(evidencia.descripcion || "")
-      setEvidenciasGuardadas([evidencia])
+
+      setEvidenciasGuardadas([
+        {
+          id: evidencia.id,
+          nombre: evidencia.nombre,
+          tipo: evidencia.tipo,
+          url: evidencia.url
+        }
+      ])
     }
-  }, [evidencia])
+  }, [evidencia, open])
 
   const handleEvidenciaGuardada = (nuevaEvidencia: any) => {
     setEvidenciasGuardadas([nuevaEvidencia])
-    toast.success("Evidencia actualizada")
+    toast.success("Nueva evidencia cargada")
   }
 
   const handleEliminarEvidencia = () => {
@@ -77,20 +91,26 @@ export function EditarEvidenciaModal({
     setSubmitting(true)
 
     try {
-      // Aquí llamas tu API real
-      /*
-      await apiClient.updateEvidencia(evidencia.id, {
-        fecha,
-        descripcion,
-        evidencia: evidenciasGuardadas[0]
-      })
-      */
+      await apiClient.updateEvidencia(
+        evidencia.id,
+        {
+          fecha,
+          descripcion,
+          nombre: evidenciasGuardadas[0]?.nombre || evidencia.nombre,
+          tipo: evidenciasGuardadas[0]?.tipo || evidencia.tipo,
+          url: evidenciasGuardadas[0]?.url || evidencia.url
+        },
+        usuarioId
+      )
 
       toast.success("Evidencia actualizada")
+
       onSuccess()
       onOpenChange(false)
+
     } catch (error) {
-      toast.error("Error al actualizar")
+      console.error(error)
+      toast.error("Error al actualizar evidencia")
     } finally {
       setSubmitting(false)
     }
@@ -106,13 +126,16 @@ export function EditarEvidenciaModal({
         </DialogHeader>
 
         <div className="space-y-4">
+
           {/* Fecha */}
           <div>
             <label className="text-xs font-medium text-muted-foreground mb-1 block">
               Fecha
             </label>
+
             <div className="relative">
               <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+
               <input
                 type="date"
                 value={fecha}
@@ -127,11 +150,13 @@ export function EditarEvidenciaModal({
             <label className="text-xs font-medium text-muted-foreground mb-1 block">
               Descripción
             </label>
+
             <textarea
               rows={3}
               value={descripcion}
               onChange={(e) => setDescripcion(e.target.value)}
               className="w-full px-3 py-2 border border-input rounded-lg resize-none"
+              placeholder="Describe esta evidencia..."
             />
           </div>
 
@@ -153,17 +178,26 @@ export function EditarEvidenciaModal({
                     key={idx}
                     className="flex items-center gap-2 bg-muted/30 p-2 rounded-lg"
                   >
-                    {ev.tipo === "archivo" && <Upload className="h-4 w-4" />}
-                    {ev.tipo === "enlace" && <Link2 className="h-4 w-4" />}
-                    {ev.tipo === "nota" && <FileText className="h-4 w-4" />}
+                    {ev.tipo === "archivo" && (
+                      <Upload className="h-4 w-4 text-primary" />
+                    )}
+
+                    {ev.tipo === "enlace" && (
+                      <Link2 className="h-4 w-4 text-primary" />
+                    )}
+
+                    {ev.tipo === "nota" && (
+                      <FileText className="h-4 w-4 text-primary" />
+                    )}
 
                     <span className="flex-1 truncate text-sm">
-                      {ev.nombre || "Evidencia"}
+                      {ev.nombre}
                     </span>
 
                     <button
+                      type="button"
                       onClick={handleEliminarEvidencia}
-                      className="text-destructive"
+                      className="text-destructive hover:text-destructive/80"
                     >
                       <X className="h-4 w-4" />
                     </button>
