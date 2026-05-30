@@ -366,6 +366,8 @@ const abrirModalEditar = (evidencia: Evidencia) => {
         open={modalEditarOpen}
         onOpenChange={setModalEditarOpen}
         evidencia={evidenciaSeleccionada}
+        actividadId={actividadId}
+        onSuccess={cargarDatos}
       />
     </div>
   )
