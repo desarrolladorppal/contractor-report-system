@@ -304,9 +304,20 @@ export default function ActividadDetailPage() {
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium">
-                            {formatColombiaDate(aporte.fecha)}
-                          </p>
+                          <div className="flex items-center gap-3">
+                            <p className="text-sm font-medium">
+                              {formatColombiaDate(aporte.fecha)}
+                            </p>
+
+                            <button
+                              onClick={() => abrirModalEditar(aporte)}
+                              className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium"
+                            >
+                              <Edit3 className="h-3 w-3" />
+                              Editar aporte
+                            </button>
+                          </div>
+
                           <span className="text-xs px-2 py-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded-full">
                             {aporte.estado}
                           </span>
@@ -329,15 +340,6 @@ export default function ActividadDetailPage() {
                                   <span className="text-muted-foreground">
                                     {ev.nombre}
                                   </span>
-
-                                  {/* Botón editar */}
-                                  <button
-                                    onClick={() => abrirModalEditar(aporte)}
-                                    className="text-primary hover:text-primary/80"
-                                  >
-                                    <Edit3 className="h-3 w-3" />
-                                  </button>
-
                                   {/* Botón descargar */}
                                   {ev.drive?.url && (
                                     <a
