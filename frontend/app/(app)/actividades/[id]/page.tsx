@@ -367,6 +367,7 @@ export default function ActividadDetailPage() {
       onOpenChange={setModalEditarOpen}
       aporte={aporteSeleccionado}
       evidencias={evidencias}
+      actividadId={actividadId}
       usuarioId={usuarioId!}
       onSuccess={cargarDatos}
     />
