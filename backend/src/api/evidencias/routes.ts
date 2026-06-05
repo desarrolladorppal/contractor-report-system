@@ -5,6 +5,7 @@ import { google } from 'googleapis';
 import { Usuario } from '../usuarios/model';
 import archiver from 'archiver';
 import { Readable } from 'stream';
+import { Aporte } from '../aportes/model';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -305,6 +306,170 @@ router.get('/contrato/:contratoId/zip', async (req, res) => {
   }
 });
 
+router.get('/aporte/:aporteId/zip', async (req, res) => {
+  try {
+    const { aporteId } = req.params;
+    const { usuarioId } = req.query;
+
+    if (!usuarioId) {
+      return res.status(400).json({
+        error: 'usuarioId requerido'
+      });
+    }
+
+    const aporte = await Aporte.findOne({
+      id: aporteId,
+      usuarioId: usuarioId.toString()
+    });
+
+    if (!aporte) {
+      return res.status(404).json({
+        error: 'Aporte no encontrado'
+      });
+    }
+
+    const evidenciaIds = aporte.evidenciaIds || [];
+
+    if (evidenciaIds.length === 0) {
+      return res.status(404).json({
+        error: 'Este aporte no tiene evidencias'
+      });
+    }
+
+    const evidencias = await Evidencia.find({
+      id: { $in: evidenciaIds }
+    });
+
+    if (evidencias.length === 0) {
+      return res.status(404).json({
+        error: 'No se encontraron evidencias'
+      });
+    }
+
+    res.setHeader(
+      'Content-Type',
+      'application/zip'
+    );
+
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=evidencias-aporte-${aporteId}.zip`
+    );
+
+    const archive = archiver('zip', {
+      zlib: { level: 9 }
+    });
+
+    archive.on('error', err => {
+      console.error(err);
+
+      if (!res.headersSent) {
+        res.status(500).json({
+          error: 'Error creando ZIP'
+        });
+      }
+    });
+
+    archive.pipe(res);
+
+    for (const ev of evidencias) {
+      try {
+
+        let fileName =
+          ev.archivo?.nombre ||
+          ev.nombre ||
+          `evidencia-${ev.id}`;
+
+        if (
+          ev.local?.usado &&
+          ev.local?.data
+        ) {
+
+          archive.append(
+            ev.local.data,
+            { name: fileName }
+          );
+
+        } else if (
+          ev.drive?.usado &&
+          ev.drive?.archivoId
+        ) {
+
+          const drive =
+            await getDriveClient(
+              usuarioId as string
+            );
+
+          if (drive) {
+
+            const fileResponse =
+              await drive.files.get(
+                {
+                  fileId:
+                    ev.drive.archivoId,
+                  alt: 'media'
+                },
+                {
+                  responseType:
+                    'stream'
+                }
+              );
+
+            archive.append(
+              fileResponse.data,
+              { name: fileName }
+            );
+          }
+
+        } else if (ev.enlace?.url) {
+
+          archive.append(
+            `[InternetShortcut]\nURL=${ev.enlace.url}`,
+            {
+              name:
+                fileName.replace(
+                  /\.url$/,
+                  ''
+                ) + '.url'
+            }
+          );
+
+        } else if (ev.nota?.contenido) {
+
+          archive.append(
+            ev.nota.contenido,
+            {
+              name:
+                fileName.replace(
+                  /\.txt$/,
+                  ''
+                ) + '.txt'
+            }
+          );
+        }
+
+      } catch (error) {
+        console.error(
+          'Error procesando evidencia:',
+          error
+        );
+      }
+    }
+
+    await archive.finalize();
+
+  } catch (error) {
+
+    console.error(error);
+
+    if (!res.headersSent) {
+      res.status(500).json({
+        error: 'Error al crear ZIP'
+      });
+    }
+  }
+});
+
 router.post('/upload', upload.single('archivo'), async (req, res) => {
   try {
     const { usuarioId, contratoId, actividadId } = req.body;
@@ -541,194 +706,6 @@ router.post('/nota', async (req, res) => {
   } catch (error) {
     console.error('Error guardando nota:', error);
     res.status(500).json({ error: 'Error al guardar nota' });
-  }
-});
-
-router.get('/carpeta/:actividadId', async (req, res) => {
-  try {
-    const { actividadId } = req.params;
-    const { usuarioId } = req.query;
-    
-    if (!usuarioId) {
-      return res.status(400).json({ error: 'usuarioId requerido' });
-    }
-    
-    const evidencia = await Evidencia.findOne({ 
-      actividadId,
-      usuarioId: usuarioId.toString(),
-      'drive.usado': true
-    }).sort({ fecha: -1 });
-    
-    if (evidencia?.drive?.url) {
-      return res.json({ 
-        carpetaUrl: evidencia.drive.url,
-        carpetaId: evidencia.drive.carpetaId
-      });
-    }
-    
-    res.json({ carpetaUrl: null });
-    
-  } catch (error) {
-    console.error('Error obteniendo carpeta:', error);
-    res.status(500).json({ error: 'Error al obtener carpeta' });
-  }
-});
-
-router.get('/aporte/:aporteId/zip', async (req, res) => {
-  try {
-    const { aporteId } = req.params;
-    const { usuarioId } = req.query;
-
-    if (!usuarioId) {
-      return res.status(400).json({
-        error: 'usuarioId requerido'
-      });
-    }
-
-    const aporte = await Aporte.findOne({
-      id: aporteId
-    });
-
-    if (!aporte) {
-      return res.status(404).json({
-        error: 'Aporte no encontrado'
-      });
-    }
-
-    const evidencias = await Evidencia.find({
-      id: {
-        $in: aporte.evidenciaIds || []
-      },
-      usuarioId: usuarioId.toString()
-    });
-
-    if (evidencias.length === 0) {
-      return res.status(404).json({
-        error: 'No hay evidencias asociadas al aporte'
-      });
-    }
-
-    res.setHeader('Content-Type', 'application/zip');
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename=evidencias-aporte-${aporteId}.zip`
-    );
-
-    const archive = archiver('zip', {
-      zlib: { level: 9 }
-    });
-
-    archive.on('error', (err) => {
-      console.error('Error creando ZIP:', err);
-
-      if (!res.headersSent) {
-        res.status(500).json({
-          error: 'Error al crear ZIP'
-        });
-      }
-    });
-
-    archive.pipe(res);
-
-    for (const ev of evidencias) {
-      try {
-        let fileName =
-          ev.archivo?.nombre ||
-          ev.nombre ||
-          `evidencia-${ev.id}`;
-
-        if (ev.local?.usado && ev.local?.data) {
-
-          archive.append(
-            ev.local.data,
-            { name: fileName }
-          );
-
-        } else if (
-          ev.drive?.usado &&
-          ev.drive?.archivoId
-        ) {
-
-          try {
-
-            const drive = await getDriveClient(
-              usuarioId.toString()
-            );
-
-            if (drive) {
-
-              const fileResponse =
-                await drive.files.get(
-                  {
-                    fileId: ev.drive.archivoId,
-                    alt: 'media'
-                  },
-                  {
-                    responseType: 'stream'
-                  }
-                );
-
-              archive.append(
-                fileResponse.data,
-                { name: fileName }
-              );
-            }
-
-          } catch (driveError) {
-
-            console.error(
-              'Error descargando archivo Drive:',
-              driveError
-            );
-
-            archive.append(
-              `Error descargando ${fileName}`,
-              {
-                name: `${fileName}.error.txt`
-              }
-            );
-          }
-
-        } else if (ev.enlace?.url) {
-
-          archive.append(
-            `[InternetShortcut]\nURL=${ev.enlace.url}`,
-            {
-              name: `${fileName}.url`
-            }
-          );
-
-        } else if (ev.nota?.contenido) {
-
-          archive.append(
-            ev.nota.titulo
-              ? `${ev.nota.titulo}\n\n${ev.nota.contenido}`
-              : ev.nota.contenido,
-            {
-              name: `${fileName}.txt`
-            }
-          );
-        }
-
-      } catch (error) {
-        console.error(
-          `Error procesando evidencia ${ev.id}`,
-          error
-        );
-      }
-    }
-
-    await archive.finalize();
-
-  } catch (error) {
- 
-    console.error(error);
-
-    if (!res.headersSent) {
-      res.status(500).json({
-        error: 'Error creando ZIP'
-      });
-    }
   }
 });
 
