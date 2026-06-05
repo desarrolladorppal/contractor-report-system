@@ -626,11 +626,6 @@ function NuevoAporteContent() {
             <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Evidencias
             </label>
-            
-            <EvidenciaUpload 
-              actividadId={actividadesSeleccionadas[0] || ""}
-              onSuccess={handleEvidenciaGuardada}
-            />
 
             {/* Lista de evidencias guardadas */}
             {evidenciasGuardadas.length > 0 && (
