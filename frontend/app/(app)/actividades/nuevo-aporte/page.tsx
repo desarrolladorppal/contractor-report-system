@@ -311,6 +311,12 @@ function NuevoAporteContent() {
       return
     }
 
+    if (evidenciasGuardadas.length === 0) {
+      const confirmar = window.confirm("No has agregado evidencias. ¿Deseas continuar sin evidencias?")
+      if (!confirmar) {
+        return
+      } 
+    }
     // Validar selección de actividades
     if (actividadesSeleccionadas.length === 0) {
       toast.error("Selecciona al menos una actividad contractual")

@@ -62,6 +62,7 @@ export function EditarAporteModal({
 
   const [fecha, setFecha] = useState("")
   const [descripcion, setDescripcion] = useState("")
+  const [estado, setEstado] = useState("completado")
   const [submitting, setSubmitting] = useState(false)
   const [errorFecha, setErrorFecha] = useState<string | null>(null)
   const [fechaFinContrato, setFechaFinContrato] = useState<string | null>(null)
@@ -87,7 +88,7 @@ export function EditarAporteModal({
           ? new Date(aporte.fecha).toISOString().split("T")[0]
           : ""
       )
-
+      setEstado(aporte.estado || "completado")
       setDescripcion(aporte.descripcion || "")
 
       const evidenciasDelAporte = evidencias.filter(ev =>
@@ -141,7 +142,7 @@ export function EditarAporteModal({
         {
           fecha: toColombiaDate(fecha),
           descripcion,
-          estado: aporte.estado || "completado",
+          estado,
           evidenciaIds
         },
         usuarioId
@@ -194,6 +195,22 @@ export function EditarAporteModal({
                 {errorFecha}
               </p>
             )}
+          </div>
+
+          {/* Estado */}
+          <div>
+            <label className="text-xs font-medium mb-1 block">
+              Estado del aporte
+            </label>
+
+            <select
+              value={estado}
+              onChange={(e) => setEstado(e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg"
+            >
+              <option value="completado">Completado</option>
+              <option value="borrador">Borrador</option>
+            </select>
           </div>
 
           {/* Descripción */}
