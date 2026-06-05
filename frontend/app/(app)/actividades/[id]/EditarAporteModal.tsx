@@ -218,6 +218,7 @@ export function EditarAporteModal({
 
             <EvidenciaUpload
               actividadId={actividadId}
+              aporteId={aporte.id}
               onSuccess={handleEvidenciaGuardada}
             />
 

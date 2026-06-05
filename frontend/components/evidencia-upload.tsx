@@ -7,6 +7,7 @@ import { toast } from "sonner"
 
 interface EvidenciaUploadProps {
   actividadId: string
+  aporteId?: string
   onSuccess?: (evidencia: any) => void
 }
 
@@ -23,7 +24,7 @@ interface NotaForm {
   contenido: string
 }
 
-export function EvidenciaUpload({ actividadId, onSuccess }: EvidenciaUploadProps) {
+export function EvidenciaUpload({ actividadId, aporteId, onSuccess }: EvidenciaUploadProps) {
   const { contratoActivo, usuarioId } = useContrato()
   const [tipo, setTipo] = useState<TipoEvidencia>('archivo')
   const [uploading, setUploading] = useState(false)
@@ -176,8 +177,13 @@ export function EvidenciaUpload({ actividadId, onSuccess }: EvidenciaUploadProps
     try {
       toast.info("Preparando descarga de evidencias...")
       
+      if (!aporteId) {
+        toast.error("No se encontró el aporte")
+        return
+      }
+
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/evidencias/contrato/${contratoActivo}/zip?usuarioId=${usuarioId}`
+        `${process.env.NEXT_PUBLIC_API_URL}/api/evidencias/aporte/${aporteId}/zip?usuarioId=${usuarioId}`
       )
       
       if (!response.ok) throw new Error('Error al descargar evidencias')
