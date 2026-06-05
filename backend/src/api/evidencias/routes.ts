@@ -721,7 +721,7 @@ router.get('/aporte/:aporteId/zip', async (req, res) => {
     await archive.finalize();
 
   } catch (error) {
-
+ 
     console.error(error);
 
     if (!res.headersSent) {

@@ -218,7 +218,7 @@ export function EvidenciaUpload({ actividadId, aporteId, onSuccess }: EvidenciaU
         'Descarga completada'
       );
 
-    } catch (error) {
+    } catch (error) { 
 
       console.error(error);
 

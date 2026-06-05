@@ -228,7 +228,7 @@ export function EditarAporteModal({
           </div>
 
           {/* Evidencias */}
-          <div className="space-y-3">
+          <div className="space-y-3"> 
             <label className="text-xs font-medium">
               Evidencias
             </label>
