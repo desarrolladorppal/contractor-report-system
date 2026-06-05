@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Search, Plus, ChevronDown, Upload } from "lucide-react"
+import { Search, Plus, ChevronDown, Upload, Download } from "lucide-react"
 import { PageHeader } from "@/components/page-header"
 import { ActivitiesTable } from "@/components/activities-table"
 import { UploadActividades } from "@/components/upload-actividades"
