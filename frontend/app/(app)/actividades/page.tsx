@@ -13,6 +13,11 @@ import { es } from "date-fns/locale"
 import { useContrato } from "@/contexts/contrato-context"
 import { toast } from "sonner"
 
+interface EvidenciaUploadProps {
+  actividadId: string
+  onSuccess?: (evidencia: any) => void
+}
+
 type FilterType = "todas" | "activa" | "baja" | "sin_inicio"
 
 const PAGE_SIZE = 25
@@ -44,7 +49,7 @@ const formatearTituloActividad = (titulo: string) => {
   }
 }
 
-export default function ActividadesPage() {
+export default function ActividadesPage({actividadId}: EvidenciaUploadProps) {
   const router = useRouter()
   const { contratoActivo, usuarioId, tieneContratos, loading: contratoLoading } = useContrato()
   const [busqueda, setBusqueda] = useState("")
@@ -216,6 +221,38 @@ export default function ActividadesPage() {
     return "U"
   }, [config])
 
+  const handleDownloadZip = async () => {
+    if (!contratoActivo || !usuarioId) {
+      toast.error('No hay contrato seleccionado')
+      return
+    }
+
+    try {
+      toast.info("Preparando descarga de evidencias...")
+      
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/evidencias/contrato/${contratoActivo}/zip?usuarioId=${usuarioId}`
+      )
+      
+      if (!response.ok) throw new Error('Error al descargar evidencias')
+      
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `evidencias-contrato-${contratoActivo.substring(0, 8)}.zip`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      window.URL.revokeObjectURL(url)
+      
+      toast.success("Descarga completada")
+    } catch (error) {
+      console.error('Error:', error)
+      toast.error('Error al descargar evidencias')
+    }
+  }
+  
   const handleActividadesExtracted = async (nuevasActividades: string[]) => {
     if (!contratoActivo || !usuarioId) return
 
@@ -347,6 +384,15 @@ export default function ActividadesPage() {
           descripcion={`${actividades.length} actividades definidas en el contrato`}
         />
         <div className="flex items-center gap-2">
+          <button
+          type="button"
+          onClick={handleDownloadZip}
+          className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg hover:bg-accent transition-colors text-sm"
+        >
+          <Download className="h-4 w-4" />
+          Descargar ZIP
+        </button>
+          
           <button
             onClick={() => setShowUpload(!showUpload)}
             className="flex items-center gap-2 rounded-md border border-input bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
