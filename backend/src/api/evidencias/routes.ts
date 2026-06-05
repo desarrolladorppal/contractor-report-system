@@ -574,4 +574,162 @@ router.get('/carpeta/:actividadId', async (req, res) => {
   }
 });
 
+router.get('/aporte/:aporteId/zip', async (req, res) => {
+  try {
+    const { aporteId } = req.params;
+    const { usuarioId } = req.query;
+
+    if (!usuarioId) {
+      return res.status(400).json({
+        error: 'usuarioId requerido'
+      });
+    }
+
+    const aporte = await Aporte.findOne({
+      id: aporteId
+    });
+
+    if (!aporte) {
+      return res.status(404).json({
+        error: 'Aporte no encontrado'
+      });
+    }
+
+    const evidencias = await Evidencia.find({
+      id: {
+        $in: aporte.evidenciaIds || []
+      },
+      usuarioId: usuarioId.toString()
+    });
+
+    if (evidencias.length === 0) {
+      return res.status(404).json({
+        error: 'No hay evidencias asociadas al aporte'
+      });
+    }
+
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=evidencias-aporte-${aporteId}.zip`
+    );
+
+    const archive = archiver('zip', {
+      zlib: { level: 9 }
+    });
+
+    archive.on('error', (err) => {
+      console.error('Error creando ZIP:', err);
+
+      if (!res.headersSent) {
+        res.status(500).json({
+          error: 'Error al crear ZIP'
+        });
+      }
+    });
+
+    archive.pipe(res);
+
+    for (const ev of evidencias) {
+      try {
+        let fileName =
+          ev.archivo?.nombre ||
+          ev.nombre ||
+          `evidencia-${ev.id}`;
+
+        if (ev.local?.usado && ev.local?.data) {
+
+          archive.append(
+            ev.local.data,
+            { name: fileName }
+          );
+
+        } else if (
+          ev.drive?.usado &&
+          ev.drive?.archivoId
+        ) {
+
+          try {
+
+            const drive = await getDriveClient(
+              usuarioId.toString()
+            );
+
+            if (drive) {
+
+              const fileResponse =
+                await drive.files.get(
+                  {
+                    fileId: ev.drive.archivoId,
+                    alt: 'media'
+                  },
+                  {
+                    responseType: 'stream'
+                  }
+                );
+
+              archive.append(
+                fileResponse.data,
+                { name: fileName }
+              );
+            }
+
+          } catch (driveError) {
+
+            console.error(
+              'Error descargando archivo Drive:',
+              driveError
+            );
+
+            archive.append(
+              `Error descargando ${fileName}`,
+              {
+                name: `${fileName}.error.txt`
+              }
+            );
+          }
+
+        } else if (ev.enlace?.url) {
+
+          archive.append(
+            `[InternetShortcut]\nURL=${ev.enlace.url}`,
+            {
+              name: `${fileName}.url`
+            }
+          );
+
+        } else if (ev.nota?.contenido) {
+
+          archive.append(
+            ev.nota.titulo
+              ? `${ev.nota.titulo}\n\n${ev.nota.contenido}`
+              : ev.nota.contenido,
+            {
+              name: `${fileName}.txt`
+            }
+          );
+        }
+
+      } catch (error) {
+        console.error(
+          `Error procesando evidencia ${ev.id}`,
+          error
+        );
+      }
+    }
+
+    await archive.finalize();
+
+  } catch (error) {
+
+    console.error(error);
+
+    if (!res.headersSent) {
+      res.status(500).json({
+        error: 'Error creando ZIP'
+      });
+    }
+  }
+});
+
 export default router;

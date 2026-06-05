@@ -169,41 +169,64 @@ export function EvidenciaUpload({ actividadId, aporteId, onSuccess }: EvidenciaU
   }
 
   const handleDownloadZip = async () => {
-    if (!contratoActivo || !usuarioId) {
-      toast.error('No hay contrato seleccionado')
-      return
+
+    if (!aporteId) {
+      toast.error(
+        'No hay un aporte seleccionado'
+      );
+      return;
     }
 
     try {
-      toast.info("Preparando descarga de evidencias...")
-      
-      if (!aporteId) {
-        toast.error("No se encontró el aporte")
-        return
-      }
+
+      toast.info(
+        'Preparando descarga de evidencias...'
+      );
 
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/evidencias/aporte/${aporteId}/zip?usuarioId=${usuarioId}`
-      )
-      
-      if (!response.ok) throw new Error('Error al descargar evidencias')
-      
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `evidencias-contrato-${contratoActivo.substring(0, 8)}.zip`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      window.URL.revokeObjectURL(url)
-      
-      toast.success("Descarga completada")
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          'Error al descargar evidencias'
+        );
+      }
+
+      const blob = await response.blob();
+
+      const url =
+        window.URL.createObjectURL(blob);
+
+      const a =
+        document.createElement('a');
+
+      a.href = url;
+
+      a.download =
+        `evidencias-aporte-${aporteId}.zip`;
+
+      document.body.appendChild(a);
+
+      a.click();
+
+      document.body.removeChild(a);
+
+      window.URL.revokeObjectURL(url);
+
+      toast.success(
+        'Descarga completada'
+      );
+
     } catch (error) {
-      console.error('Error:', error)
-      toast.error('Error al descargar evidencias')
+
+      console.error(error);
+
+      toast.error(
+        'Error al descargar evidencias'
+      );
     }
-  }
+  };
 
   const resetForm = () => {
     setEnlaceForm({ url: '', titulo: '', descripcion: '' })
