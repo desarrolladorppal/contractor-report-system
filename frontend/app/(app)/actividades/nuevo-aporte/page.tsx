@@ -25,7 +25,7 @@ import {
 } from "lucide-react"
 import { apiClient } from "@/lib/api-client"
 import { useContrato } from "@/contexts/contrato-context"
-import { EvidenciaUpload } from "@/components/evidencia-upload"
+import { EvidenciaUpload } from "@/components/evidence-upload"
 import { getCurrentColombiaDate, toColombiaDate } from "@/lib/utils"
 import type { TipoEvidencia } from "@/lib/types"
 import { toast } from "sonner"
@@ -367,66 +367,23 @@ function NuevoAporteContent() {
           }
         )
       );
-      // Subir evidencias para cada aporte creado
-      if (evidenciasGuardadas.length > 0) {
 
-        await Promise.all(
-          aportesCreados.map(async (aporte) => {
-
-            const actividadId = aporte.actividadId
-            const formData = new FormData()
-            formData.append("usuarioId", usuarioId)
-            formData.append("contratoId", contratoActivo)
-            formData.append("actividadId", actividadId)
-            formData.append( "aporteId", aporte.id)
-
-            const evidenciasJson: any[] = []
-
-            for (const evidencia of evidenciasGuardadas) {
-
-              if (evidencia.tipo === "archivo") {
-                formData.append("archivos", evidencia.archivo)
-              } else {
-                evidenciasJson.push( evidencia)
-              }
-            }
-            formData.append("evidencias",JSON.stringify(evidenciasJson))
-            return apiClient.uploadEvidencias(formData)
-          })
-        )
-      }
-
-      const mensajeActividades = actividadesSeleccionadas.length === 1
-          ? "la actividad seleccionada"
-          : `las ${actividadesSeleccionadas.length} actividades seleccionadas`
+      const mensajeActividades = actividadesSeleccionadas.length === 1 
+        ? "la actividad seleccionada" 
+        : `las ${actividadesSeleccionadas.length} actividades seleccionadas`
 
       if (asBorrador) {
-        toast.success(
-          `Borrador guardado exitosamente para ${mensajeActividades}`
-        )
+        toast.success(`Borrador guardado exitosamente para ${mensajeActividades}`)
       } else {
-        toast.success(
-          `Aporte enviado exitosamente para ${mensajeActividades}`
-        )
+        toast.success(`Aporte enviado exitosamente para ${mensajeActividades}`)
       }
-
-      setDescripcion("")
-      setEvidenciasGuardadas([])
-
+      
       router.push("/actividades")
-
     } catch (error) {
-
-      console.error(error)
-
-      toast.error(
-        "Error al registrar el aporte"
-      )
-
+      console.error("Error:", error)
+      toast.error("Error al registrar el aporte")
     } finally {
-
       setSubmitting(false)
-
     }
   }
 
