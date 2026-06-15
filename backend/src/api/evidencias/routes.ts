@@ -483,7 +483,10 @@ router.post('/',upload.array('archivos'), async (req, res) => {
         return res.status(400).json({error: 'Faltan datos requeridos'});
       }
 
-      const archivos = req.files || [];
+      const archivos: Express.Multer.File[] =
+        Array.isArray(req.files)
+          ? (req.files as Express.Multer.File[])
+          : [];
 
       const evidencias = req.body.evidencias? JSON.parse(req.body.evidencias): [];
 
@@ -504,10 +507,10 @@ router.post('/',upload.array('archivos'), async (req, res) => {
         } catch (error) {console.error(error);}
       }
 
-      const evidenciasGuardadas = [];
+      const evidenciasGuardadas: any[] = [];
 
       // ARCHIVOS
-      for (const archivo of archivos) {let driveInfo = {usado: false};
+      for (const archivo of archivos) {let driveInfo: any = {usado: false};
 
         if (drive && carpetas) {
           try {
@@ -587,16 +590,16 @@ router.post('/',upload.array('archivos'), async (req, res) => {
       // NOTAS Y ENLACES
       for (const evidencia of evidencias) {
 
-        let driveInfo = {
+        let driveInfo: any = {
           usado: false
         };
 
         if (drive && carpetas) {
           try {
 
-            let nombreArchivo;
-            let buffer;
-            let mimeType;
+            let nombreArchivo: string | undefined;
+            let buffer: Buffer | undefined;
+            let mimeType: string | undefined;
 
             if (
               evidencia.tipo ===
@@ -633,6 +636,10 @@ router.post('/',upload.array('archivos'), async (req, res) => {
               mimeType = 'text/plain';
             }
 
+            if (!nombreArchivo || !buffer || !mimeType) {
+              continue;
+            }
+
             const file =
               await drive.files.create({
                 requestBody: {
@@ -666,7 +673,7 @@ router.post('/',upload.array('archivos'), async (req, res) => {
           }
         }
 
-        const documento = {
+        const documento: any = {
           id: `EV-${Date.now()}-${Math.random()
             .toString(36)
             .slice(2, 6)}`,
