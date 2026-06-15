@@ -25,7 +25,7 @@ import {
 } from "lucide-react"
 import { apiClient } from "@/lib/api-client"
 import { useContrato } from "@/contexts/contrato-context"
-import { EvidenciaUpload } from "@/components/evidence-upload"
+import { EvidenciaUpload } from "@/components/evidencia-upload"
 import { getCurrentColombiaDate, toColombiaDate } from "@/lib/utils"
 import type { TipoEvidencia } from "@/lib/types"
 import { toast } from "sonner"
