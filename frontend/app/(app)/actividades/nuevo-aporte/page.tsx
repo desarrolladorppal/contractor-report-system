@@ -302,7 +302,7 @@ function NuevoAporteContent() {
 
   const handleEvidenciaGuardada = (evidencia: any) => {
     setEvidenciasGuardadas(prev => [...prev, evidencia])
-    toast.success("Evidencia guardada")
+    toast.success("Evidencia agregada")
   }
 
   async function handleSubmit(asBorrador: boolean) {
@@ -337,7 +337,6 @@ function NuevoAporteContent() {
     setSubmitting(true)
 
     try {
-      const evidenciaIds = evidenciasGuardadas.map(ev => ev.id || ev._id)
       
       // Convertir fecha a zona horaria de Colombia (UTC-5)
       const fechaColombia = toColombiaDate(fecha)
@@ -351,7 +350,6 @@ function NuevoAporteContent() {
           actividadId,
           fecha: fechaColombia,
           descripcion: descripcion.trim() || "(Borrador sin descripción)",
-          evidenciaIds,
           estado: asBorrador ? "borrador" : "completado",
           monto: 1
         }
