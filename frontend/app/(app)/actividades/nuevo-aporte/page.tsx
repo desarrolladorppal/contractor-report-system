@@ -25,7 +25,7 @@ import {
 } from "lucide-react"
 import { apiClient } from "@/lib/api-client"
 import { useContrato } from "@/contexts/contrato-context"
-import { EvidenciaUpload } from "@/components/evidence-upload"
+import { EvidenciaUpload } from "@/components/evidencia-upload"
 import { getCurrentColombiaDate, toColombiaDate } from "@/lib/utils"
 import type { TipoEvidencia } from "@/lib/types"
 import { toast } from "sonner"
@@ -345,19 +345,28 @@ function NuevoAporteContent() {
       console.log("📝 Fecha para guardar:", fechaColombia)
       
       // Crear el aporte para cada actividad seleccionada
-      const aportesPromises = actividadesSeleccionadas.map(actividadId => {
-        const nuevoAporte = {
-          actividadId,
-          fecha: fechaColombia,
-          descripcion: descripcion.trim() || "(Borrador sin descripción)",
-          estado: asBorrador ? "borrador" : "completado",
-          monto: 1
-        }
-        
-        return apiClient.createAporte(nuevoAporte, usuarioId, contratoActivo)
-      })
-      
-      await Promise.all(aportesPromises)
+      const aportesCreados = await Promise.all(
+        actividadesSeleccionadas.map(actividadId => {
+            const nuevoAporte = {
+              actividadId,
+              fecha: fechaColombia,
+              descripcion:
+                descripcion.trim() ||
+                "(Borrador sin descripción)",
+              estado: asBorrador
+                ? "borrador"
+                : "completado",
+              monto: 1
+            };
+
+            return apiClient.createAporte(
+              nuevoAporte,
+              usuarioId,
+              contratoActivo
+            );
+          }
+        )
+      );
 
       const mensajeActividades = actividadesSeleccionadas.length === 1 
         ? "la actividad seleccionada" 
