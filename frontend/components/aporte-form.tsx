@@ -98,36 +98,75 @@ export function AporteForm({ actividadId, onSuccess }: AporteFormProps) {
     setSubmitting(true)
     
     try {
-      const evidenciaIds = evidenciasGuardadas.map(ev => ev.id || ev._id)
-      
       // Convertir fecha a zona horaria de Colombia (UTC-5)
       const fechaColombia = toColombiaDate(fecha)
+      console.log("evidencias:", evidenciasGuardadas)
       
-      console.log("📝 Fecha original:", fecha)
-      console.log("📝 Fecha para guardar:", fechaColombia)
-      
-      await apiClient.createAporte(
+      const aporte = await apiClient.createAporte(
         {
           actividadId,
           fecha: fechaColombia,
           descripcion: descripcion.trim(),
-          evidenciaIds,
           estado: "completado",
           monto: 1
         },
         usuarioId,
         contratoActivo
-      )
+      );
+
+      console.log("Aporte creado:", aporte);
       
-      toast.success("Aporte registrado correctamente")
-      setDescripcion("")
-      setEvidenciasGuardadas([])
-      onSuccess()
+    // 2. Si hay evidencias, subirlas
+      if ( evidenciasGuardadas.length > 0 ) {
+
+        const formData = new FormData();
+
+        formData.append( "usuarioId", usuarioId);
+
+        formData.append( "contratoId", contratoActivo );
+
+        formData.append( "actividadId", actividadId );
+
+        formData.append( "aporteId", aporte.id );
+
+        const evidenciasJson = [];
+
+        for (
+          const evidencia of evidenciasGuardadas
+        ) {
+          if ( evidencia.tipo === "archivo") {
+            formData.append( "archivos", evidencia.archivo);
+          } else {
+            evidenciasJson.push(evidencia);
+          }
+        }
+
+        formData.append("evidencias", JSON.stringify(evidenciasJson));
+
+        await apiClient.uploadEvidencias(
+          formData
+        );
+      }
+
+      toast.success( "Aporte registrado correctamente");
+
+      setDescripcion("");
+
+      setEvidenciasGuardadas([]);
+
+      onSuccess();
+
     } catch (error) {
-      console.error("Error:", error)
-      toast.error("Error al registrar el aporte")
+
+      console.error(error);
+
+      toast.error(
+        "Error al registrar el aporte"
+      );
+
     } finally {
-      setSubmitting(false)
+
+      setSubmitting(false);
     }
   }
 

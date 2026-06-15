@@ -52,29 +52,39 @@ router.get('/actividad/:actividadId', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { usuarioId, contratoId, actividadId } = req.body;
-    
-    console.log('🔍 POST /api/aportes - body:', req.body);
-    
-    if (!usuarioId || !contratoId || !actividadId) {
-      return res.status(400).json({ error: 'usuarioId, contratoId y actividadId son requeridos' });
-    }
-
-    const nuevoAporte = new Aporte({
-      ...req.body,
-      id: req.body.id || `AP-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+    const {
       usuarioId,
-      contratoId, 
+      contratoId,
+      actividadId,
+      evidencias = [],
+      ...aporteData
+    } = req.body;
+
+    if (!usuarioId || !contratoId || !actividadId) {
+      return res.status(400).json({
+        error: 'usuarioId, contratoId y actividadId son requeridos'
+      });
+    }
+    const aporteId = req.body.id || `AP-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const nuevoAporte = new Aporte({...aporteData,
+      id: aporteId,
+      usuarioId,
+      contratoId,
+      actividadId,
+      evidenciaIds: [],
       creadoEn: new Date()
     });
 
     await nuevoAporte.save();
-    console.log('✅ Aporte creado:', nuevoAporte.id, 'para contrato:', contratoId);
-    
+
     res.status(201).json(nuevoAporte);
+
   } catch (error) {
-    console.error('❌ Error creando aporte:', error);
-    res.status(500).json({ error: 'Error al crear aporte' });
+    console.error(error);
+
+    res.status(500).json({
+      error: 'Error al crear aporte'
+    });
   }
 });
 

@@ -14,6 +14,24 @@ export const apiClient = {
     }
   },
 
+    async uploadEvidencias(formData: FormData) {
+    try {
+      const response = await fetch(`${API_URL}/api/evidencias`, {method: "POST",body: formData}
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Error subiendo evidencias");
+      }
+
+      return await response.json();
+
+    } catch (error) {
+      console.error("Error subiendo evidencias:", error);
+      throw error;
+    }
+  },
+
   async getContrato(id: string) {
     try {
       const res = await fetch(`${API_URL}/api/contracts/${id}`);
@@ -546,6 +564,7 @@ async deleteActividad(actividadId: string, usuarioId: string): Promise<void> {
       throw error;
     }
   },
+
 };
 
 

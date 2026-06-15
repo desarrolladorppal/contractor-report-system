@@ -37,43 +37,10 @@ export function EvidenciaUpload({ actividadId, aporteId, onSuccess }: EvidenciaU
     const file = e.target.files?.[0]
     if (!file) return
 
-    setUploading(true)
-    const formData = new FormData()
-    formData.append('archivo', file)
-    formData.append('usuarioId', usuarioId!)
-    formData.append('contratoId', contratoActivo!)
-    formData.append('actividadId', actividadId)
-
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/evidencias/upload`, {
-        method: 'POST',
-        body: formData
-      })
-
-      if (!res.ok) {
-        const errorText = await res.text()
-        console.error('❌ Error response:', errorText)
-        throw new Error('Error al subir archivo')
-      }
-
-      const data = await res.json()
-      
-      if (data.drive?.usado) {
-        toast.success("Archivo subido a Google Drive")
-        setCarpetaUrl(data.drive.url)
-      } else {
-        toast.success("Archivo guardado en el sistema")
-      }
-      
-      if (onSuccess) onSuccess(data)
-      
-    } catch (error) {
-      console.error('Error:', error)
-      toast.error('Error al subir archivo')
-    } finally {
-      setUploading(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
-    }
+    const evidencia = {tipo: 'archivo', nombre: file.name,archivo: file}
+    onSuccess?.(evidencia)
+    toast.success('Archivo agregado: ' + file.name)
+    if(fileInputRef.current) {fileInputRef.current.value = ''}
   }
 
   const handleEnlaceSubmit = async (e: React.FormEvent) => {
@@ -83,43 +50,10 @@ export function EvidenciaUpload({ actividadId, aporteId, onSuccess }: EvidenciaU
       return
     }
 
-    setUploading(true)
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/evidencias/enlace`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          usuarioId,
-          contratoId: contratoActivo,
-          actividadId,
-          ...enlaceForm
-        })
-      })
-
-      if (!res.ok) {
-        const errorText = await res.text()
-        console.error('❌ Error response:', errorText)
-        throw new Error('Error al guardar enlace')
-      }
-
-      const data = await res.json()
-      
-      if (data.drive?.usado) {
-        toast.success("Enlace guardado en Google Drive")
-        setCarpetaUrl(data.drive.url)
-      } else {
-        toast.success("Enlace guardado")
-      }
-      
-      setEnlaceForm({ url: '', titulo: '', descripcion: '' })
-      if (onSuccess) onSuccess(data)
-      
-    } catch (error) {
-      console.error('Error:', error)
-      toast.error('Error al guardar enlace')
-    } finally {
-      setUploading(false)
-    }
+    const evidencia = {tipo: 'enlace', url: enlaceForm.url, titulo: enlaceForm.titulo, descripcion: enlaceForm.descripcion}
+    onSuccess?.(evidencia)
+    setEnlaceForm({ url: '', titulo: '', descripcion: '' })
+    toast.success('Enlace agregado')
   }
 
   const handleNotaSubmit = async (e: React.FormEvent) => {
@@ -128,44 +62,10 @@ export function EvidenciaUpload({ actividadId, aporteId, onSuccess }: EvidenciaU
       toast.error('El contenido es requerido')
       return
     }
-
-    setUploading(true)
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/evidencias/nota`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          usuarioId,
-          contratoId: contratoActivo,
-          actividadId,
-          ...notaForm
-        })
-      })
-
-      if (!res.ok) {
-        const errorText = await res.text()
-        console.error('❌ Error response:', errorText)
-        throw new Error('Error al guardar nota')
-      }
-
-      const data = await res.json()
-      
-      if (data.drive?.usado) {
-        toast.success("Nota guardada en Google Drive")
-        setCarpetaUrl(data.drive.url)
-      } else {
-        toast.success("Nota guardada")
-      }
-      
-      setNotaForm({ titulo: '', contenido: '' })
-      if (onSuccess) onSuccess(data)
-      
-    } catch (error) {
-      console.error('Error:', error)
-      toast.error('Error al guardar nota')
-    } finally {
-      setUploading(false)
-    }
+    const evidencia = {tipo: 'nota', titulo: notaForm.titulo, contenido: notaForm.contenido}
+    onSuccess?.(evidencia)
+    setNotaForm({ titulo: '', contenido: '' })
+    toast.success('Nota agregada')
   }
 
   const handleDownloadZip = async () => {

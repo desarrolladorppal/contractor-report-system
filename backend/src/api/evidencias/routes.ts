@@ -470,243 +470,294 @@ router.get('/aporte/:aporteId/zip', async (req, res) => {
   }
 });
 
-router.post('/upload', upload.single('archivo'), async (req, res) => {
-  try {
-    const { usuarioId, contratoId, actividadId } = req.body;
-    
-    if (!usuarioId || !contratoId || !actividadId || !req.file) {
-      return res.status(400).json({ error: 'Faltan datos requeridos' });
-    }
-    
-    const drive = await getDriveClient(usuarioId);
-    let driveUsado = false;
-    let driveInfo = null;
-    
-    if (drive) {
-      try {
-        const carpetas = await crearEstructuraCarpetas(drive, usuarioId, contratoId, actividadId);
-        
-        if (carpetas) {
-          const fileMetadata = {
-            name: req.file.originalname,
-            parents: [carpetas.carpetaId]
-          };
-          
-          const media = {
-            mimeType: req.file.mimetype,
-            body: Readable.from(req.file.buffer)
-          };
-          
-          const file = await drive.files.create({
-            requestBody: fileMetadata,
-            media: media,
-            fields: 'id, name, webViewLink, size'
-          });
-          
-          driveUsado = true;
-          driveInfo = {
-            usado: true,
-            carpetaId: carpetas.carpetaId,
-            carpetaNombre: carpetas.carpetaNombre,
-            url: carpetas.url,
-            archivoId: file.data.id
-          };
-        }
-      } catch (driveError) {
-        console.error('Error subiendo a Drive, usando almacenamiento local:', driveError);
-      }
-    }
-    
-    const nuevaEvidencia = new Evidencia({
-      id: `EV-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-      actividadId,
-      contratoId,
-      usuarioId,
-      tipo: 'archivo',
-      nombre: req.file.originalname,
-      archivo: {
-        nombre: req.file.originalname,
-        tamaño: req.file.size,
-        tipo: req.file.mimetype
-      },
-      drive: driveUsado ? driveInfo : { usado: false },
-      local: driveUsado ? { usado: false } : {
-        usado: true,
-        data: req.file.buffer,
-        contentType: req.file.mimetype,
-        tamaño: req.file.size
-      },
-      fecha: new Date()
-    });
-    
-    await nuevaEvidencia.save();
-    
-    const evidenciaResponse = nuevaEvidencia.toObject();
-    if (evidenciaResponse.local?.data) {
-      delete evidenciaResponse.local.data;
-    }
-    
-    res.json(evidenciaResponse);
-    
-  } catch (error) {
-    console.error('Error subiendo archivo:', error);
-    res.status(500).json({ error: 'Error al subir archivo' });
-  }
-});
+router.post('/',upload.array('archivos'), async (req, res) => {
+    try {
+      const {
+        usuarioId,
+        contratoId,
+        actividadId,
+        aporteId
+      } = req.body;
 
-router.post('/enlace', async (req, res) => {
-  try {
-    const { usuarioId, contratoId, actividadId, url, titulo, descripcion } = req.body;
-    
-    if (!usuarioId || !contratoId || !actividadId || !url) {
-      return res.status(400).json({ error: 'Faltan datos requeridos' });
-    }
-    
-    const drive = await getDriveClient(usuarioId);
-    let driveUsado = false;
-    let driveInfo = null;
-    
-    if (drive) {
-      try {
-        const carpetas = await crearEstructuraCarpetas(drive, usuarioId, contratoId, actividadId);
-        
-        if (carpetas) {
-          const urlContent = `[InternetShortcut]\nURL=${url}`;
-          const urlBuffer = Buffer.from(urlContent, 'utf-8');
-          
-          const fileName = titulo ? `${titulo}.url` : `enlace-${Date.now()}.url`;
-          
-          const fileMetadata = {
-            name: fileName,
-            parents: [carpetas.carpetaId]
-          };
-          
-          const media = {
-            mimeType: 'application/internet-shortcut',
-            body: Readable.from(urlBuffer)
-          };
-          
-          const file = await drive.files.create({
-            requestBody: fileMetadata,
-            media: media,
-            fields: 'id, name, webViewLink'
-          });
-          
-          driveUsado = true;
-          driveInfo = {
-            usado: true,
-            carpetaId: carpetas.carpetaId,
-            carpetaNombre: carpetas.carpetaNombre,
-            url: carpetas.url,
-            archivoId: file.data.id
-          };
-        }
-      } catch (driveError) {
-        console.error('Error subiendo a Drive:', driveError);
+      if (!usuarioId || !contratoId || !actividadId) {
+        return res.status(400).json({error: 'Faltan datos requeridos'});
       }
-    }
-    
-    const nuevaEvidencia = new Evidencia({
-      id: `EV-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-      actividadId,
-      contratoId,
-      usuarioId,
-      tipo: 'enlace',
-      nombre: titulo || url,
-      enlace: { url, titulo, descripcion },
-      drive: driveUsado ? driveInfo : { usado: false },
-      local: { usado: false }, 
-      fecha: new Date()
-    });
-    
-    await nuevaEvidencia.save();
-    
-    res.json(nuevaEvidencia);
-    
-  } catch (error) {
-    console.error('Error guardando enlace:', error);
-    res.status(500).json({ error: 'Error al guardar enlace' });
-  }
-});
 
-router.post('/nota', async (req, res) => {
-  try {
-    const { usuarioId, contratoId, actividadId, titulo, contenido } = req.body;
-    
-    if (!usuarioId || !contratoId || !actividadId || !contenido) {
-      return res.status(400).json({ error: 'Faltan datos requeridos' });
-    }
-    
-    const drive = await getDriveClient(usuarioId);
-    let driveUsado = false;
-    let driveInfo = null;
-    
-    if (drive) {
-      try {
-        const carpetas = await crearEstructuraCarpetas(drive, usuarioId, contratoId, actividadId);
-        
-        if (carpetas) {
-          const notaContent = titulo ? `${titulo}\n\n${contenido}` : contenido;
-          const notaBuffer = Buffer.from(notaContent, 'utf-8');
-          
-          const fileName = titulo ? `${titulo}.txt` : `nota-${Date.now()}.txt`;
-          
-          const fileMetadata = {
-            name: fileName,
-            parents: [carpetas.carpetaId]
-          };
-          
-          const media = {
-            mimeType: 'text/plain',
-            body: Readable.from(notaBuffer)
-          };
-          
-          const file = await drive.files.create({
-            requestBody: fileMetadata,
-            media: media,
-            fields: 'id, name, webViewLink'
+      const archivos = req.files || [];
+
+      const evidencias = req.body.evidencias? JSON.parse(req.body.evidencias): [];
+
+      if (archivos.length === 0 && evidencias.length === 0) {
+        return res.status(400).json({error: 'Debe enviar al menos una evidencia'});
+      }
+
+      const drive = await getDriveClient(usuarioId);
+      let carpetas = null;
+
+      if (drive) {
+        try {carpetas = await crearEstructuraCarpetas(
+              drive,
+              usuarioId,
+              contratoId,
+              actividadId
+            );
+        } catch (error) {console.error(error);}
+      }
+
+      const evidenciasGuardadas = [];
+
+      // ARCHIVOS
+      for (const archivo of archivos) {let driveInfo = {usado: false};
+
+        if (drive && carpetas) {
+          try {
+            const file =
+              await drive.files.create({
+                requestBody: {
+                  name: archivo.originalname,
+                  parents: [carpetas.carpetaId]
+                },
+                media: {
+                  mimeType: archivo.mimetype,
+                  body: Readable.from(
+                    archivo.buffer
+                  )
+                },
+                fields:
+                  'id,name,webViewLink'
+              });
+            driveInfo = {
+              usado: true,
+              carpetaId:
+                carpetas.carpetaId,
+              carpetaNombre:
+                carpetas.carpetaNombre,
+              url: carpetas.url,
+              archivoId:
+                file.data.id
+            };
+          } catch (error) {
+            console.error(error);
+          }
+        }
+
+        const nuevaEvidencia =
+          await Evidencia.create({
+            id: `EV-${Date.now()}-${Math.random()
+              .toString(36)
+              .slice(2, 6)}`,
+
+            actividadId,
+            contratoId,
+            usuarioId,
+
+            tipo: 'archivo',
+
+            nombre:
+              archivo.originalname,
+
+            archivo: {
+              nombre:
+                archivo.originalname,
+              tamaño: archivo.size,
+              tipo: archivo.mimetype
+            },
+
+            drive: driveInfo,
+
+            local: driveInfo.usado
+              ? { usado: false }
+              : {
+                  usado: true,
+                  data: archivo.buffer,
+                  contentType:
+                    archivo.mimetype,
+                  tamaño:
+                    archivo.size
+                },
+
+            fecha: new Date()
           });
-          
-          driveUsado = true;
-          driveInfo = {
-            usado: true,
-            carpetaId: carpetas.carpetaId,
-            carpetaNombre: carpetas.carpetaNombre,
-            url: carpetas.url,
-            archivoId: file.data.id
+
+        evidenciasGuardadas.push(
+          nuevaEvidencia
+        );
+      }
+
+      // NOTAS Y ENLACES
+      for (const evidencia of evidencias) {
+
+        let driveInfo = {
+          usado: false
+        };
+
+        if (drive && carpetas) {
+          try {
+
+            let nombreArchivo;
+            let buffer;
+            let mimeType;
+
+            if (
+              evidencia.tipo ===
+              'enlace'
+            ) {
+              nombreArchivo =
+                evidencia.titulo
+                  ? `${evidencia.titulo}.url`
+                  : `enlace-${Date.now()}.url`;
+
+              buffer = Buffer.from(
+                `[InternetShortcut]\nURL=${evidencia.url}`
+              );
+
+              mimeType =
+                'application/internet-shortcut';
+            }
+
+            if (
+              evidencia.tipo ===
+              'nota'
+            ) {
+              nombreArchivo =
+                evidencia.titulo
+                  ? `${evidencia.titulo}.txt`
+                  : `nota-${Date.now()}.txt`;
+
+              buffer = Buffer.from(
+                evidencia.titulo
+                  ? `${evidencia.titulo}\n\n${evidencia.contenido}`
+                  : evidencia.contenido
+              );
+
+              mimeType = 'text/plain';
+            }
+
+            const file =
+              await drive.files.create({
+                requestBody: {
+                  name: nombreArchivo,
+                  parents: [carpetas.carpetaId]
+                },
+                media: {
+                  mimeType,
+                  body:
+                    Readable.from(
+                      buffer
+                    )
+                },
+                fields:
+                  'id,name,webViewLink'
+              });
+
+            driveInfo = {
+              usado: true,
+              carpetaId:
+                carpetas.carpetaId,
+              carpetaNombre:
+                carpetas.carpetaNombre,
+              url: carpetas.url,
+              archivoId:
+                file.data.id
+            };
+
+          } catch (error) {
+            console.error(error);
+          }
+        }
+
+        const documento = {
+          id: `EV-${Date.now()}-${Math.random()
+            .toString(36)
+            .slice(2, 6)}`,
+
+          actividadId,
+          contratoId,
+          usuarioId,
+
+          tipo: evidencia.tipo,
+
+          nombre:
+            evidencia.titulo ||
+            evidencia.url ||
+            'Nota',
+
+          drive: driveInfo,
+
+          local: {
+            usado: false
+          },
+
+          fecha: new Date()
+        };
+
+        if (
+          evidencia.tipo ===
+          'enlace'
+        ) {
+          documento.enlace = {
+            url: evidencia.url,
+            titulo:
+              evidencia.titulo,
+            descripcion:
+              evidencia.descripcion
           };
         }
-      } catch (driveError) {
-        console.error('Error subiendo a Drive:', driveError);
+
+        if (
+          evidencia.tipo ===
+          'nota'
+        ) {
+          documento.nota = {
+            titulo:
+              evidencia.titulo,
+            contenido:
+              evidencia.contenido
+          };
+        }
+
+        const nuevaEvidencia =
+          await Evidencia.create(
+            documento
+          );
+
+        evidenciasGuardadas.push(
+          nuevaEvidencia
+        );
       }
+
+      const evidenciaIds =
+        evidenciasGuardadas.map(
+          evidencia => evidencia.id
+        );
+
+      if (aporteId) {
+        await Aporte.updateOne(
+          { id: aporteId },
+          {
+            $addToSet: {
+              evidenciaIds: {
+                $each: evidenciaIds
+              }
+            }
+          }
+        );
+      }
+      return res.json({
+        total: evidenciasGuardadas.length,
+        evidenciaIds,
+        evidencias: evidenciasGuardadas
+      });
+
+    } catch (error) {
+      console.error(error);
+
+      return res.status(500).json({
+        error:
+          'Error guardando evidencias'
+      });
     }
-    
-    const nuevaEvidencia = new Evidencia({
-      id: `EV-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-      actividadId,
-      contratoId,
-      usuarioId,
-      tipo: 'nota',
-      nombre: titulo || 'Nota',
-      nota: { titulo, contenido },
-      drive: driveUsado ? driveInfo : { usado: false },
-      local: driveUsado ? { usado: false } : {
-        usado: true,
-        data: Buffer.from(contenido, 'utf-8'),
-        contentType: 'text/plain',
-        tamaño: contenido.length
-      },
-      fecha: new Date()
-    });
-    
-    await nuevaEvidencia.save();
-    
-    res.json(nuevaEvidencia);
-    
-  } catch (error) {
-    console.error('Error guardando nota:', error);
-    res.status(500).json({ error: 'Error al guardar nota' });
   }
-});
+);
 
 export default router;
