@@ -25,7 +25,7 @@ import {
 } from "lucide-react"
 import { apiClient } from "@/lib/api-client"
 import { useContrato } from "@/contexts/contrato-context"
-import { EvidenciaUpload } from "@/components/evidencia-upload"
+import { EvidenciaUpload } from "@/components/evidence-upload"
 import { getCurrentColombiaDate, toColombiaDate } from "@/lib/utils"
 import type { TipoEvidencia } from "@/lib/types"
 import { toast } from "sonner"
@@ -301,8 +301,14 @@ function NuevoAporteContent() {
   }, [])
 
   const handleEvidenciaGuardada = (evidencia: any) => {
+    console.log("📎 Evidencia guardada:", evidencia)
     setEvidenciasGuardadas(prev => [...prev, evidencia])
     toast.success("Evidencia agregada")
+  }
+  
+  const handleEliminarEvidencia = (index: number) => {
+    setEvidenciasGuardadas(prev => prev.filter((_, i) => i !== index))
+    toast.success("Evidencia eliminada")
   }
 
   async function handleSubmit(asBorrador: boolean) {
@@ -367,23 +373,66 @@ function NuevoAporteContent() {
           }
         )
       );
+      // Subir evidencias para cada aporte creado
+      if (evidenciasGuardadas.length > 0) {
 
-      const mensajeActividades = actividadesSeleccionadas.length === 1 
-        ? "la actividad seleccionada" 
-        : `las ${actividadesSeleccionadas.length} actividades seleccionadas`
+        await Promise.all(
+          aportesCreados.map(async (aporte) => {
+
+            const actividadId = aporte.actividadId
+            const formData = new FormData()
+            formData.append("usuarioId", usuarioId)
+            formData.append("contratoId", contratoActivo)
+            formData.append("actividadId", actividadId)
+            formData.append( "aporteId", aporte.id)
+
+            const evidenciasJson: any[] = []
+
+            for (const evidencia of evidenciasGuardadas) {
+
+              if (evidencia.tipo === "archivo") {
+                formData.append("archivos", evidencia.archivo)
+              } else {
+                evidenciasJson.push( evidencia)
+              }
+            }
+            formData.append("evidencias",JSON.stringify(evidenciasJson))
+            return apiClient.uploadEvidencias(formData)
+          })
+        )
+      }
+
+      const mensajeActividades = actividadesSeleccionadas.length === 1
+          ? "la actividad seleccionada"
+          : `las ${actividadesSeleccionadas.length} actividades seleccionadas`
 
       if (asBorrador) {
-        toast.success(`Borrador guardado exitosamente para ${mensajeActividades}`)
+        toast.success(
+          `Borrador guardado exitosamente para ${mensajeActividades}`
+        )
       } else {
-        toast.success(`Aporte enviado exitosamente para ${mensajeActividades}`)
+        toast.success(
+          `Aporte enviado exitosamente para ${mensajeActividades}`
+        )
       }
-      
+
+      setDescripcion("")
+      setEvidenciasGuardadas([])
+
       router.push("/actividades")
+
     } catch (error) {
-      console.error("Error:", error)
-      toast.error("Error al registrar el aporte")
+
+      console.error(error)
+
+      toast.error(
+        "Error al registrar el aporte"
+      )
+
     } finally {
+
       setSubmitting(false)
+
     }
   }
 
@@ -648,7 +697,7 @@ function NuevoAporteContent() {
                     {ev.tipo === 'archivo' && <Upload className="h-4 w-4 text-primary" />}
                     {ev.tipo === 'enlace' && <Link2 className="h-4 w-4 text-primary" />}
                     {ev.tipo === 'nota' && <FileText className="h-4 w-4 text-primary" />}
-                    <span className="flex-1 truncate">{ev.nombre || ev.archivo?.nombre}</span>
+                    <span className="flex-1 truncate"> {ev.nombre ||  ev.titulo || ev.archivo?.name || "Sin nombre"}</span>
                     {ev.ubicacionDrive?.url && (
                       <a
                         href={ev.ubicacionDrive.url}
